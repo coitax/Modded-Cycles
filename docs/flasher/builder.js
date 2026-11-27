@@ -217,6 +217,8 @@ function wrap(body, product, startSeq = START_SEQ) {
 // ===========================================================================
 const SECT_HDR = 8, OFFSET_BIAS = 767, REUSE_GAMMA = 2, FAR_THRESHOLD = 3328, END_GAMMA = 0x1000002;
 const LITERAL = 1, MATCH = 0;
+const MAX_UNPACKED = 4 * 1024 * 1024;           // as mtlib/aplib.py: above any real section, below a bomb
+const tooBig = () => new Error(`decompressed output exceeds ${MAX_UNPACKED} bytes`);
 
 function aplibDepack(stream) {
   if (stream.length < SECT_HDR) throw new Error("section plus courte que son en-tete");
@@ -242,7 +244,10 @@ function aplibDepack(stream) {
   const ops = [];
   let lastOff = 1;
   while (true) {
-    if (bit()) { ops.push([LITERAL, out.length, 0, 1]); out.push(stream[ip++]); continue; }
+    if (bit()) {
+      if (out.length >= MAX_UNPACKED) throw tooBig();
+      ops.push([LITERAL, out.length, 0, 1]); out.push(stream[ip++]); continue;
+    }
     const g = gamma();
     let off;
     if (g === REUSE_GAMMA) {
@@ -258,6 +263,7 @@ function aplibDepack(stream) {
     if (off > FAR_THRESHOLD) L += 1;
     const n = L + 1;
     if (off === 0 || off > out.length) throw new Error("flux corrompu : offset hors sortie");
+    if (out.length + n > MAX_UNPACKED) throw tooBig();
     ops.push([MATCH, out.length, off, n]);
     const src = out.length - off;
     for (let k = 0; k < n; k++) out.push(out[src + k]);

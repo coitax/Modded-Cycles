@@ -52,7 +52,7 @@ dans la table de glyphes de la police de chiffres est sans danger ([note 15 §2]
 La licence du projet (MIT, [`LICENSE`](../../LICENSE)), ce qu'elle ne couvre pas et toutes les licences tierces sont dans
 [`THIRD-PARTY-NOTICES.md`](../../THIRD-PARTY-NOTICES.md). En dehors des tweaks :
 
-- `tools/mtlib/` : drumkilla, repris sans modification (MIT, [`tools/mtlib/LICENSE`](../../tools/mtlib/LICENSE)), d'après
+- `tools/mtlib/` : drumkilla, repris sans modification sauf un plafond de taille de sortie dans `depack` de `aplib.py` (MIT, [`tools/mtlib/LICENSE`](../../tools/mtlib/LICENSE)), d'après
   elektron-firmware-tool de Marcel Bierling (MIT, [`tools/mtlib/LICENSE-elektron-firmware-tool`](../../tools/mtlib/LICENSE-elektron-firmware-tool)) ;
   `docs/flasher/builder.js` en est le portage JavaScript.
 - `tools/flash.py` : adapté du `tools/flash.py` de ms-multi-output (scottmetoyer, MIT).

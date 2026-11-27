@@ -16,6 +16,10 @@ OFFSET_BIAS = 767
 REUSE_GAMMA = 2
 FAR_THRESHOLD = 3328
 END_GAMMA = 0x1000002          # (END_GAMMA << 8) + 0xFF wraps to OFFSET_BIAS
+# A few hundred stream bytes can describe gigabytes of matches. Every real
+# section is far smaller: the stock MAIN OS is 1,744,192 bytes and build.py
+# never emits one past END_LIMIT - BASE = 2,096,128 bytes.
+MAX_UNPACKED = 4 * 1024 * 1024
 
 LITERAL, MATCH = 1, 0
 
@@ -47,6 +51,8 @@ def depack(stream):
     """stream = section bytes including the 8-byte header.
 
     Returns (data, ops) where ops is a list of (kind, out_pos, off, n).
+    Raises ValueError, before copying, for an op that would grow the output
+    past MAX_UNPACKED.
     """
     if len(stream) < SECT_HDR:
         raise ValueError('section shorter than its header')
@@ -56,6 +62,8 @@ def depack(stream):
     last_off = 1
     while True:
         if r.bit():
+            if len(out) >= MAX_UNPACKED:
+                raise ValueError(f'decompressed output exceeds {MAX_UNPACKED} bytes')
             ops.append((LITERAL, len(out), 0, 1))
             out.append(stream[r.ip])
             r.ip += 1
@@ -77,6 +85,8 @@ def depack(stream):
         n = L + 1
         if off == 0 or off > len(out):
             raise ValueError('corrupt stream: offset past the output')
+        if len(out) + n > MAX_UNPACKED:
+            raise ValueError(f'decompressed output exceeds {MAX_UNPACKED} bytes')
         ops.append((MATCH, len(out), off, n))
         src = len(out) - off
         if off >= n:
