@@ -10,8 +10,9 @@ de ton .syx, puis reconstruit et re-signe le conteneur (checksums + HMAC-SHA256)
     python3 tools/build.py -i model-cycles_OS1.13.syx -t 6ch-multiout
     python3 tools/build.py -i model-cycles_OS1.13.syx -t 6ch-multiout --expect-mainos 65e24b50...
 
-Sécurité : chaque octet « old » est vérifié avant écriture ; le SHA-256 de la section 3
-d'origine est vérifié ; après build, tous les checksums et le HMAC sont recontrôlés.
+Sécurité : le SHA-256 du .syx entier doit être celui de l'officiel (device.json), puis celui de
+la section 3 ; chaque octet « old » est vérifié avant écriture ; après build, tous les checksums
+et le HMAC sont recontrôlés.
 Deux tweaks déclarés incompatibles (champ « conflicts ») sont refusés ensemble. Un tweak
 qui écrit dans une zone 0xFF (cave) est refusé si l'image d'origine pointe dans cette zone,
 sauf si cette référence est elle-même réécrite par un des tweaks choisis.
@@ -362,20 +363,16 @@ def main():
         return
 
     raw = pathlib.Path(args.input).read_bytes()
+    # Le .syx entier doit etre l'officiel : les sections 2, 4 et 5 (bootstrap, updater, meta) sont recopiees
+    # telles quelles dans la sortie re-signee, un MAIN OS officiel ne suffit pas.
+    name, dev, tweaks = pick_target(cat, sha(raw))
+    if not dev:
+        raise SystemExit(f"!! {args.input} n'est pas un .syx officiel connu (SHA-256 {sha(raw)[:16]}...) : "
+                         "pars du fichier telecharge sur elektron.se, jamais d'un build ou d'un fichier modifie")
     stream, info = unwrap(raw)                       # verifie chaque checksum de paquet
     c = container.parse(stream)
     s3 = next(s for s in c["sections"] if s["id"] == 3)
     main_os, ops = aplib.depack(c["blob"][s3["off"]:s3["off"] + s3["size"]])
-
-    name, dev, tweaks = pick_target(cat, sha(raw))
-    if not dev:
-        # repli : matcher sur le MAIN OS decompresse
-        for nm, (d, tw) in cat.items():
-            if d["section_sha256"] == sha(main_os):
-                name, dev, tweaks = nm, d, tw
-                break
-    if not dev:
-        raise SystemExit("!! image non reconnue (ni .syx ni section 3). Version d'OS differente ?")
     if sha(main_os) != dev["section_sha256"]:
         raise SystemExit("!! la section 3 ne correspond pas a l'image de reference")
     print(f"cible : {dev['device']} OS {dev['os']}")

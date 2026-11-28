@@ -673,6 +673,9 @@ function payloadRuntime(ap, img, mainOs) {
  * dont l'empreinte differe est refuse. modsChecked : chaque tweak choisi avait son empreinte, et elle correspond.
  * Renvoie { raw, mainOsSha, patchedBytes, caves, modsChecked, product, name }. */
 function build(raw, device, chosen, opts = {}) {
+  // Sections 2, 4 and 5 (bootstrap, updater, meta) are copied into the re-signed output: the whole file must be the official one.
+  if (!device.stock_syx_sha256 || hex(sha256(raw)) !== device.stock_syx_sha256)
+    throw new Error("ce .syx n'est pas le fichier officiel (SHA-256 du fichier entier different)");
   const { stream, product, name, start_seq } = unwrap(raw);
   const c = parseContainer(stream);
   const s3 = c.sections.find((s) => s.id === 3);
