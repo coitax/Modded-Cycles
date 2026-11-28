@@ -9,7 +9,8 @@ for (const f of ["01-latching-mute", "02-trig-preview", "03-browser-scroll",
   const t = JSON.parse(fs.readFileSync(`tweaks/model-cycles_OS1.13/${f}.json`));
   tweaks[t.id] = t;
 }
-const device = { device: meta.device, os: meta.os, section_sha256: meta.section_sha256, cave_refs_ok: meta.cave_refs_ok };
+const device = { device: meta.device, os: meta.os, section_sha256: meta.section_sha256, cave_refs_ok: meta.cave_refs_ok,
+                 stock_syx_sha256: B.hex(B.sha256(raw)) };   // the synthetic image stands in for the official file
 let ok = true;
 for (const [key, e] of Object.entries(meta.expect)) {
   const exp = new Uint8Array(fs.readFileSync(path.join(dir, `expect_${key}.syx`)));
